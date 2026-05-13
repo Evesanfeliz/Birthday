@@ -29,35 +29,55 @@ function HomePage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
+  function getFriendlyErrorMessage(cause: unknown, fallback: string) {
+    if (cause instanceof Error) {
+      if (cause.message.includes("Missing Supabase environment variable")) {
+        return "Supabase environment variables are missing in this deployment."
+      }
+      return cause.message || fallback
+    }
+
+    return fallback
+  }
+
   async function createRoom(e: React.FormEvent) {
     e.preventDefault();
     if (!nickname.trim()) return;
     setBusy(true);
     setError("");
-    const roomCode = generateRoomCode();
-    const { data: room, error: rErr } = await supabase
-      .from("rooms")
-      .insert({ code: roomCode, phase: "lobby" })
-      .select()
-      .single();
-    if (rErr || !room) {
-      setError("Couldn't create room. Try again.");
+    try {
+      const roomCode = generateRoomCode();
+      const { data: room, error: rErr } = await supabase
+        .from("rooms")
+        .insert({ code: roomCode, phase: "lobby" })
+        .select()
+        .single();
+      if (rErr || !room) {
+        setError("Couldn't create room. Try again.");
+        return;
+      }
+      const { data: player, error: pErr } = await supabase
+        .from("players")
+        .insert({ room_id: room.id, nickname: nickname.trim().slice(0, 20), is_host: true })
+        .select()
+        .single();
+      if (pErr || !player) {
+        setError("Couldn't join room.");
+        return;
+      }
+      const { error: uErr } = await supabase.from("rooms").update({ host_player_id: player.id }).eq("id", room.id);
+      if (uErr) {
+        setError("Room was created, but host setup failed. Try again.");
+        return;
+      }
+      setPlayer(roomCode, player.id, player.nickname);
+      navigate({ to: "/r/$code", params: { code: roomCode } });
+    } catch (cause) {
+      console.error(cause);
+      setError(getFriendlyErrorMessage(cause, "Couldn't create room. Try again."));
+    } finally {
       setBusy(false);
-      return;
     }
-    const { data: player, error: pErr } = await supabase
-      .from("players")
-      .insert({ room_id: room.id, nickname: nickname.trim().slice(0, 20), is_host: true })
-      .select()
-      .single();
-    if (pErr || !player) {
-      setError("Couldn't join room.");
-      setBusy(false);
-      return;
-    }
-    await supabase.from("rooms").update({ host_player_id: player.id }).eq("id", room.id);
-    setPlayer(roomCode, player.id, player.nickname);
-    navigate({ to: "/r/$code", params: { code: roomCode } });
   }
 
   async function joinRoom(e: React.FormEvent) {
@@ -65,29 +85,34 @@ function HomePage() {
     if (!nickname.trim() || !code.trim()) return;
     setBusy(true);
     setError("");
-    const roomCode = code.trim().toUpperCase();
-    const { data: room } = await supabase
-      .from("rooms")
-      .select("*")
-      .eq("code", roomCode)
-      .maybeSingle();
-    if (!room) {
-      setError("Room not found.");
+    try {
+      const roomCode = code.trim().toUpperCase();
+      const { data: room } = await supabase
+        .from("rooms")
+        .select("*")
+        .eq("code", roomCode)
+        .maybeSingle();
+      if (!room) {
+        setError("Room not found.");
+        return;
+      }
+      const { data: player, error: pErr } = await supabase
+        .from("players")
+        .insert({ room_id: room.id, nickname: nickname.trim().slice(0, 20) })
+        .select()
+        .single();
+      if (pErr || !player) {
+        setError("Couldn't join.");
+        return;
+      }
+      setPlayer(roomCode, player.id, player.nickname);
+      navigate({ to: "/r/$code", params: { code: roomCode } });
+    } catch (cause) {
+      console.error(cause);
+      setError(getFriendlyErrorMessage(cause, "Couldn't join."));
+    } finally {
       setBusy(false);
-      return;
     }
-    const { data: player, error: pErr } = await supabase
-      .from("players")
-      .insert({ room_id: room.id, nickname: nickname.trim().slice(0, 20) })
-      .select()
-      .single();
-    if (pErr || !player) {
-      setError("Couldn't join.");
-      setBusy(false);
-      return;
-    }
-    setPlayer(roomCode, player.id, player.nickname);
-    navigate({ to: "/r/$code", params: { code: roomCode } });
   }
 
   return (
