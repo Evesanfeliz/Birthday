@@ -69,7 +69,7 @@ function RoomPage() {
 
   return (
     <main className="min-h-screen px-4 py-6 sm:py-10">
-      <div className="mx-auto max-w-3xl">
+      <div className={isHost ? "mx-auto max-w-6xl" : "mx-auto max-w-3xl"}>
         <Header code={code} me={me} round={r.round} phase={r.phase} onLeave={() => { clearPlayer(code); navigate({ to: "/" }); }} />
 
         {r.phase === "lobby" && (
@@ -115,7 +115,7 @@ function Header({ code, me, round, phase, onLeave }: { code: string; me: Player;
   return (
     <div className="mb-6 flex items-center justify-between">
       <div className="flex items-center gap-2">
-        <span className="rounded-xl bg-card-pop px-3 py-1.5 font-bold tracking-widest text-card-foreground shadow-tile">
+        <span className={`rounded-xl ${me.is_host ? "bg-white/14 text-white" : "bg-card-pop text-card-foreground"} px-3 py-1.5 font-bold tracking-widest shadow-tile`}>
           {code}
         </span>
         {phase !== "lobby" && (
@@ -197,6 +197,72 @@ function Lobby({
       .eq("id", room.id);
   }
 
+  if (isHost) {
+    return (
+      <div className="grid gap-6 lg:grid-cols-[1.25fr_0.85fr]">
+        <div className="rounded-[2rem] border border-white/10 bg-white/8 p-8 text-white shadow-pop backdrop-blur">
+          <p className="text-sm font-bold uppercase tracking-[0.35em] text-white/70">Scan to join</p>
+          <div className="mt-5 flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="text-sm font-semibold text-white/60">Room PIN</p>
+              <h2 className="mt-2 text-stroke text-7xl font-extrabold tracking-[0.25em]">{code}</h2>
+              <p className="mt-5 max-w-xl text-lg font-medium text-white/80">
+                Players join on their phones, pick a nickname, and wait for the first secret challenge round.
+              </p>
+            </div>
+            <div className="rounded-[2rem] bg-white p-5 shadow-pop">
+              <QRCodeSVG value={url} size={240} />
+            </div>
+          </div>
+          <div className="mt-6 rounded-2xl bg-black/15 px-4 py-3 text-sm font-semibold text-white/70">
+            {url}
+          </div>
+          <button
+            onClick={() => { navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 1500); }}
+            className="mt-4 flex items-center gap-2 rounded-xl bg-white/14 px-4 py-3 text-sm font-bold text-white hover:bg-white/20"
+          >
+            {copied ? <><Check className="h-4 w-4" /> Copied</> : <><Copy className="h-4 w-4" /> Copy invite link</>}
+          </button>
+        </div>
+
+        <div className="rounded-[2rem] bg-card-pop p-8 text-card-foreground shadow-pop">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="flex items-center gap-2 text-3xl font-bold">
+              <Users className="h-7 w-7" /> Players
+            </h2>
+            <span className="rounded-full bg-primary px-3 py-1 text-sm font-extrabold text-primary-foreground">
+              {players.length}
+            </span>
+          </div>
+          <ul className="mt-5 space-y-3">
+            {players.map((p, index) => (
+              <li
+                key={p.id}
+                className={`flex items-center justify-between rounded-2xl px-4 py-3 text-base font-bold text-white shadow-tile ${
+                  ["bg-fun-pink", "bg-fun-yellow text-card-foreground", "bg-fun-blue", "bg-fun-green", "bg-fun-orange"][index % 5]
+                }`}
+                style={{ textShadow: index % 5 === 1 ? undefined : "0 1px 0 rgba(0,0,0,0.25)" }}
+              >
+                <span className="truncate">{p.nickname}</span>
+                <span className="text-sm uppercase tracking-wider opacity-80">Ready</span>
+              </li>
+            ))}
+          </ul>
+          <button
+            onClick={startParty}
+            disabled={players.length < 1}
+            className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-5 py-5 text-2xl font-extrabold text-primary-foreground shadow-tile disabled:opacity-50"
+          >
+            Start party <ArrowRight className="h-6 w-6" />
+          </button>
+          {players.length < 2 && (
+            <p className="mt-3 text-center text-sm font-semibold text-muted-foreground">Invite at least two players for the full party flow.</p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="grid gap-6 sm:grid-cols-2">
       <div className="rounded-3xl bg-card-pop p-6 text-card-foreground shadow-pop">
@@ -260,24 +326,40 @@ function SubmittingPhase({
     const allSubmitted = players.length > 0 && players.every((p) => submittedIds.has(p.id));
 
     return (
-      <div className="space-y-4">
-        <Card>
-          <h2 className="text-3xl font-bold">Everyone is sending a secret challenge 🤫</h2>
-          <p className="mt-2 text-muted-foreground">Players submit on their phones. Challenges stay hidden until it is their turn.</p>
-          <div className="mt-5 text-center">
-            <p className="text-6xl font-extrabold text-secondary">{roundChallenges.length}/{players.length}</p>
-            <p className="mt-2 text-sm font-bold uppercase tracking-wider text-muted-foreground">submissions in</p>
+      <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+        <div className="rounded-[2rem] border border-white/10 bg-white/8 p-10 text-white shadow-pop backdrop-blur">
+          <p className="text-sm font-bold uppercase tracking-[0.35em] text-white/70">Round {room.round}</p>
+          <h2 className="mt-4 text-6xl font-extrabold leading-none">Everyone is sending a secret challenge</h2>
+          <p className="mt-4 max-w-2xl text-xl font-medium text-white/75">
+            Phones only. Nobody sees the challenge until it appears on this screen.
+          </p>
+          <div className="mt-10 grid gap-5 sm:grid-cols-2">
+            <div className="rounded-[2rem] bg-black/15 p-8 text-center">
+              <p className="text-sm font-bold uppercase tracking-[0.3em] text-white/60">Submitted</p>
+              <p className="mt-3 text-stroke text-8xl font-extrabold text-secondary">{roundChallenges.length}</p>
+            </div>
+            <div className="rounded-[2rem] bg-black/15 p-8 text-center">
+              <p className="text-sm font-bold uppercase tracking-[0.3em] text-white/60">Remaining</p>
+              <p className="mt-3 text-stroke text-8xl font-extrabold">{Math.max(players.length - roundChallenges.length, 0)}</p>
+            </div>
           </div>
-        </Card>
+          <div className="mt-8 rounded-2xl bg-primary px-6 py-5 text-center text-2xl font-extrabold text-primary-foreground shadow-tile">
+            {allSubmitted ? "All challenges are in. Starting now..." : "Waiting for the last phones"}
+          </div>
+        </div>
 
-        <Card>
-          <ul className="space-y-2">
+        <div className="rounded-[2rem] bg-card-pop p-8 text-card-foreground shadow-pop">
+          <h3 className="mb-4 flex items-center gap-2 text-2xl font-bold">
+            <Sparkles className="h-6 w-6 text-secondary" />
+            Player status
+          </h3>
+          <ul className="space-y-3">
             {players.map((p) => {
               const ok = submittedIds.has(p.id);
               return (
                 <li
                   key={p.id}
-                  className={`flex items-center justify-between rounded-xl px-3 py-3 text-sm font-bold ${ok ? "bg-fun-green text-white" : "bg-muted text-card-foreground"}`}
+                  className={`flex items-center justify-between rounded-2xl px-4 py-4 text-base font-bold ${ok ? "bg-fun-green text-white" : "bg-muted text-card-foreground"}`}
                   style={ok ? { textShadow: "0 1px 0 rgba(0,0,0,0.3)" } : {}}
                 >
                   <span className="truncate">{p.nickname}</span>
@@ -286,10 +368,7 @@ function SubmittingPhase({
               );
             })}
           </ul>
-          <p className="mt-4 text-center text-sm text-muted-foreground">
-            {allSubmitted ? "Starting soon..." : "Waiting for everyone to submit"}
-          </p>
-        </Card>
+        </div>
       </div>
     );
   }
@@ -462,13 +541,13 @@ function PerformingPhase({
       <p className="mb-1 text-sm font-bold uppercase tracking-wider text-muted-foreground">
         Challenge from {author?.nickname ?? "someone"} 🎭
       </p>
-      <h2 className="mb-3 flex flex-wrap gap-1 text-2xl font-bold">
+      <h2 className={`mb-3 flex flex-wrap gap-1 font-bold ${isHost ? "text-5xl" : "text-2xl"}`}>
         Performers:{" "}
         {performers.map((p) => (
           <span key={p.id} className="rounded-lg bg-primary px-2 py-0.5 text-primary-foreground">{p.nickname}</span>
         ))}
       </h2>
-      <p className="rounded-2xl bg-muted px-5 py-6 text-2xl font-bold text-card-foreground">
+      <p className={`rounded-2xl bg-muted px-5 py-6 font-bold text-card-foreground ${isHost ? "text-5xl leading-tight" : "text-2xl"}`}>
         {challenge.description}
       </p>
       {amPerformer ? (
@@ -476,8 +555,15 @@ function PerformingPhase({
           We're done! Start voting →
         </button>
       ) : isHost ? (
-        <div className="mt-5 rounded-2xl bg-primary px-5 py-6 text-center text-2xl font-extrabold text-primary-foreground shadow-tile">
-          Watch the performance
+        <div className="mt-6 grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+          <div className="rounded-[2rem] border border-white/10 bg-white/8 px-8 py-10 text-center text-white shadow-pop backdrop-blur">
+            <p className="text-sm font-bold uppercase tracking-[0.35em] text-white/65">Now performing</p>
+            <p className="mt-4 text-4xl font-extrabold">{performers.map((p) => p.nickname).join(" + ")}</p>
+            <p className="mt-5 text-2xl font-semibold text-white/75">Watch the challenge on stage</p>
+          </div>
+          <div className="rounded-[2rem] bg-primary px-8 py-10 text-center text-4xl font-extrabold text-primary-foreground shadow-tile">
+            Make some noise
+          </div>
         </div>
       ) : (
         <p className="mt-5 text-center text-sm text-muted-foreground">Watch carefully — voting opens when they're done.</p>
@@ -536,20 +622,32 @@ function VotingPhase({
   }, [allVoted]);
 
   const pendingCount = roundChallenges.filter((c) => c.status === "pending").length;
+  const voteProgress = eligibleVoters.length > 0 ? Math.round((votes.length / eligibleVoters.length) * 100) : 0;
 
   return (
     <Card>
       <p className="mb-1 text-sm font-bold uppercase tracking-wider text-muted-foreground">
         Vote 1–5 ⭐ · {pendingCount} more after this
       </p>
-      <h2 className="mb-1 text-2xl font-bold">{challenge.description}</h2>
+      <h2 className={`mb-1 font-bold ${isHost ? "text-5xl" : "text-2xl"}`}>{challenge.description}</h2>
       <p className="mb-5 text-sm text-muted-foreground">
         Performed by {challenge.performer_ids.map((id) => players.find((p) => p.id === id)?.nickname).join(", ")}
       </p>
 
       {isHost ? (
-        <div className="rounded-xl bg-primary px-4 py-6 text-center text-xl font-bold text-primary-foreground shadow-tile">
-          Audience voting in progress
+        <div className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
+          <div className="rounded-[2rem] border border-white/10 bg-white/8 px-8 py-10 text-white shadow-pop backdrop-blur">
+            <p className="text-sm font-bold uppercase tracking-[0.35em] text-white/65">Audience voting</p>
+            <p className="mt-4 text-6xl font-extrabold">{votes.length}<span className="text-3xl text-white/70">/{eligibleVoters.length}</span></p>
+            <div className="mt-6 h-6 overflow-hidden rounded-full bg-black/20">
+              <div className="h-full rounded-full bg-secondary transition-all" style={{ width: `${voteProgress}%` }} />
+            </div>
+            <p className="mt-4 text-2xl font-semibold text-white/75">Phones are scoring this performance right now</p>
+          </div>
+          <div className="rounded-[2rem] bg-primary px-8 py-10 text-center text-primary-foreground shadow-tile">
+            <p className="text-sm font-bold uppercase tracking-[0.3em] opacity-80">Live progress</p>
+            <p className="mt-4 text-stroke text-8xl font-extrabold">{voteProgress}%</p>
+          </div>
         </div>
       ) : isPerformer ? (
         <p className="rounded-xl bg-muted px-4 py-6 text-center font-semibold text-muted-foreground">
@@ -632,14 +730,14 @@ function ResultsPhase({
       </Card>
 
       <Card>
-        <h2 className="mb-4 flex items-center gap-2 text-3xl font-bold">
+        <h2 className={`mb-4 flex items-center gap-2 font-bold ${isHost ? "text-5xl" : "text-3xl"}`}>
           <Trophy className="h-7 w-7 text-secondary" /> Ranking
         </h2>
-        <ol className="space-y-2">
+        <ol className={`space-y-2 ${isHost ? "lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0" : ""}`}>
           {ranked.map((p, i) => (
             <li
               key={p.id}
-              className={`flex items-center justify-between rounded-xl px-4 py-3 font-bold shadow-tile ${
+              className={`flex items-center justify-between rounded-xl px-4 ${isHost ? "py-5 text-xl" : "py-3"} font-bold shadow-tile ${
                 i === 0 ? "bg-secondary text-secondary-foreground"
                   : i === 1 ? "bg-fun-blue text-white"
                   : i === 2 ? "bg-fun-orange text-white"
@@ -657,11 +755,11 @@ function ResultsPhase({
         </ol>
 
         {isHost ? (
-          <div className="mt-5 grid gap-2 sm:grid-cols-2">
-            <button onClick={nextRound} className="flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-4 text-lg font-bold text-primary-foreground shadow-tile">
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            <button onClick={nextRound} className="flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-5 text-2xl font-bold text-primary-foreground shadow-tile">
               <Mic className="h-5 w-5" /> Next round
             </button>
-            <button onClick={backToLobby} className="rounded-xl bg-muted px-4 py-4 text-lg font-bold text-card-foreground shadow-tile">
+            <button onClick={backToLobby} className="rounded-xl bg-muted px-4 py-5 text-2xl font-bold text-card-foreground shadow-tile">
               Back to lobby
             </button>
           </div>
