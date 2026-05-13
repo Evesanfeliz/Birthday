@@ -341,7 +341,7 @@ function SubmittingPhase({
             </div>
           </div>
           <div className="mt-8 rounded-2xl bg-primary px-6 py-5 text-center text-2xl font-extrabold text-primary-foreground shadow-tile">
-            {allSubmitted ? "All challenges are in. Starting now..." : "Waiting for the last phones"}
+            {allSubmitted ? "All challenges are in. Starting now..." : "Waiting for the last players"}
           </div>
         </div>
 
