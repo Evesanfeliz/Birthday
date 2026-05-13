@@ -330,9 +330,6 @@ function SubmittingPhase({
         <div className="rounded-[2rem] border border-white/10 bg-white/8 p-10 text-white shadow-pop backdrop-blur">
           <p className="text-sm font-bold uppercase tracking-[0.35em] text-white/70">Round {room.round}</p>
           <h2 className="mt-4 text-6xl font-extrabold leading-none">Everyone is sending a secret challenge</h2>
-          <p className="mt-4 max-w-2xl text-xl font-medium text-white/75">
-            Phones only. Nobody sees the challenge until it appears on this screen.
-          </p>
           <div className="mt-10 grid gap-5 sm:grid-cols-2">
             <div className="rounded-[2rem] bg-black/15 p-8 text-center">
               <p className="text-sm font-bold uppercase tracking-[0.3em] text-white/60">Submitted</p>
