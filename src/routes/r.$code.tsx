@@ -124,7 +124,7 @@ function Header({ code, me, round, phase, onLeave }: { code: string; me: Player;
           </span>
         )}
         <span className="text-sm font-semibold text-foreground/80">
-          {me.is_host ? "Host screen" : me.nickname} {me.is_host && <Crown className="inline h-4 w-4 text-secondary" />}
+          {me.nickname} {me.is_host && <><Crown className="inline h-4 w-4 text-secondary" /> <span className="ml-1">Host</span></>}
         </span>
       </div>
       <button
