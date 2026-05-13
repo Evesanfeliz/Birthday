@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { supabase } from "@/integrations/supabase/client";
 import { getPlayer, setPlayer, clearPlayer } from "@/lib/player-storage";
@@ -20,6 +20,7 @@ import {
   Send,
   Sparkles,
   EyeOff,
+  UserRound,
 } from "lucide-react";
 
 export const Route = createFileRoute("/r/$code")({
@@ -37,129 +38,6 @@ type Room = {
 
 function challengeIsSecret(challenge: Challenge) {
   return Boolean((challenge as Challenge & { is_secret?: boolean }).is_secret);
-}
-
-type StageTheme = {
-  background: string;
-  halo: string;
-  accent: string;
-  accentText: string;
-  panel: string;
-  panelStrong: string;
-  edge: string;
-};
-
-function createTheme(background: string, halo: string, accent: string, accentText = "#04131c"): StageTheme {
-  return {
-    background,
-    halo,
-    accent,
-    accentText,
-    panel: "rgba(8, 25, 37, 0.72)",
-    panelStrong: "rgba(2, 14, 22, 0.88)",
-    edge: "rgba(164, 255, 241, 0.18)",
-  };
-}
-
-function getStageTheme(challenge: Challenge | null, phase: string): StageTheme {
-  if (!challenge) {
-    if (phase === "lobby") {
-      return createTheme(
-        "radial-gradient(circle at 18% 18%, rgba(95, 255, 226, 0.16), transparent 26%), radial-gradient(circle at 82% 22%, rgba(79, 132, 255, 0.16), transparent 28%), linear-gradient(145deg, #03131c 0%, #072131 42%, #0b1925 100%)",
-        "rgba(101, 245, 221, 0.22)",
-        "#9ef8eb",
-      );
-    }
-
-    if (phase === "submitting") {
-      return createTheme(
-        "radial-gradient(circle at 20% 18%, rgba(90, 255, 224, 0.16), transparent 24%), radial-gradient(circle at 80% 26%, rgba(255, 122, 191, 0.16), transparent 24%), linear-gradient(150deg, #031019 0%, #0a2330 45%, #11192c 100%)",
-        "rgba(100, 251, 227, 0.28)",
-        "#8ffff0",
-      );
-    }
-
-    return createTheme(
-      "radial-gradient(circle at 24% 20%, rgba(115, 255, 230, 0.18), transparent 24%), radial-gradient(circle at 78% 18%, rgba(255, 180, 111, 0.18), transparent 26%), linear-gradient(150deg, #04131d 0%, #0a1b28 42%, #101c26 100%)",
-      "rgba(115, 255, 230, 0.24)",
-      "#a4fff1",
-    );
-  }
-
-  const text = `${challenge.description} ${challengeIsSecret(challenge) ? "secret" : ""}`.toLowerCase();
-
-  if (/(sing|song|karaoke|chorus|rap|music)/.test(text)) {
-    return createTheme(
-      "radial-gradient(circle at 20% 25%, rgba(255, 93, 170, 0.22), transparent 24%), radial-gradient(circle at 78% 24%, rgba(106, 226, 255, 0.22), transparent 26%), linear-gradient(145deg, #12081b 0%, #161437 45%, #081e2f 100%)",
-      "rgba(255, 104, 178, 0.26)",
-      "#8ff6ff",
-    );
-  }
-
-  if (/(dance|move|twerk|party|disco|baila)/.test(text)) {
-    return createTheme(
-      "radial-gradient(circle at 18% 18%, rgba(255, 161, 75, 0.24), transparent 24%), radial-gradient(circle at 82% 20%, rgba(255, 97, 177, 0.24), transparent 26%), linear-gradient(150deg, #170b17 0%, #28162c 40%, #131d2e 100%)",
-      "rgba(255, 169, 91, 0.28)",
-      "#ffcb8a",
-    );
-  }
-
-  if (/(kiss|flirt|spicy|date|romantic|sexy|hug)/.test(text)) {
-    return createTheme(
-      "radial-gradient(circle at 22% 20%, rgba(255, 138, 166, 0.22), transparent 24%), radial-gradient(circle at 78% 28%, rgba(255, 206, 126, 0.18), transparent 25%), linear-gradient(150deg, #160910 0%, #2a0f20 42%, #241523 100%)",
-      "rgba(255, 144, 181, 0.28)",
-      "#ffc7d9",
-      "#34111f",
-    );
-  }
-
-  if (/(act|drama|scene|pretend|improv|character)/.test(text)) {
-    return createTheme(
-      "radial-gradient(circle at 18% 16%, rgba(255, 208, 120, 0.2), transparent 23%), radial-gradient(circle at 78% 28%, rgba(120, 164, 255, 0.18), transparent 26%), linear-gradient(145deg, #1b1209 0%, #2b1f16 42%, #111d29 100%)",
-      "rgba(255, 212, 127, 0.24)",
-      "#ffd993",
-      "#1c140a",
-    );
-  }
-
-  if (challengeIsSecret(challenge) || /(secret|mystery|surprise|whisper)/.test(text)) {
-    return createTheme(
-      "radial-gradient(circle at 18% 24%, rgba(87, 214, 255, 0.16), transparent 24%), radial-gradient(circle at 76% 20%, rgba(180, 120, 255, 0.18), transparent 28%), linear-gradient(145deg, #020c16 0%, #091628 42%, #16102a 100%)",
-      "rgba(135, 178, 255, 0.22)",
-      "#cfd8ff",
-      "#0b1530",
-    );
-  }
-
-  if (/(funny|joke|crazy|wild|silly|laugh)/.test(text)) {
-    return createTheme(
-      "radial-gradient(circle at 24% 18%, rgba(255, 214, 94, 0.22), transparent 24%), radial-gradient(circle at 76% 24%, rgba(93, 255, 211, 0.16), transparent 24%), linear-gradient(145deg, #10140a 0%, #19261a 38%, #0a1f23 100%)",
-      "rgba(255, 220, 105, 0.24)",
-      "#ffe38f",
-      "#22160a",
-    );
-  }
-
-  return createTheme(
-    "radial-gradient(circle at 20% 18%, rgba(94, 255, 225, 0.18), transparent 24%), radial-gradient(circle at 78% 20%, rgba(255, 116, 170, 0.16), transparent 24%), linear-gradient(145deg, #04131c 0%, #0b2230 42%, #101722 100%)",
-    "rgba(101, 245, 221, 0.24)",
-    "#9ef8eb",
-  );
-}
-
-function getStageStyle(theme: StageTheme): CSSProperties {
-  return {
-    backgroundImage: theme.background,
-    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.03), 0 30px 80px rgba(1, 8, 14, 0.55)",
-    border: `1px solid ${theme.edge}`,
-  };
-}
-
-function performerNames(challenge: Challenge, players: Player[]) {
-  return challenge.performer_ids
-    .map((id) => players.find((p) => p.id === id)?.nickname)
-    .filter(Boolean)
-    .join(" + ");
 }
 
 function RoomPage() {
@@ -194,13 +72,9 @@ function RoomPage() {
   const isHost = me.is_host;
   const participants = players.filter((p) => !p.is_host);
   const roundChallenges = challenges.filter((c) => (c as any).round === r.round);
-  const stageTheme = getStageTheme(currentChallenge, r.phase);
 
   return (
-    <main
-      className="min-h-screen px-4 py-6 sm:py-10"
-      style={{ backgroundImage: stageTheme.background, backgroundAttachment: "fixed" }}
-    >
+    <main className="min-h-screen px-4 py-6 sm:py-10">
       <div className={isHost ? "mx-auto max-w-6xl" : "mx-auto max-w-3xl"}>
         <Header code={code} me={me} round={r.round} phase={r.phase} onLeave={() => { clearPlayer(code); navigate({ to: "/" }); }} />
 
@@ -647,7 +521,7 @@ function SubmitChallengeForm({
           : "mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-muted px-4 py-3 text-sm font-bold text-card-foreground shadow-tile"}
       >
         <EyeOff className="h-4 w-4" />
-        {isSecret ? "Secret challenge enabled" : "Make this a secret challenge"}
+        {isSecret ? "This is a secret challenge" : "Make this a secret challenge"}
       </button>
 
       <button
@@ -656,7 +530,7 @@ function SubmitChallengeForm({
         className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-4 text-xl font-bold text-primary-foreground shadow-tile disabled:opacity-50"
       >
         {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
-        Submit secretly
+        Submit
       </button>
     </Card>
   );
@@ -668,12 +542,12 @@ function PerformingPhase({
   challenge, players, me, room,
   isHost,
 }: { challenge: Challenge; players: Player[]; me: Player; room: Room; isHost: boolean }) {
+  const performers = players.filter((p) => challenge.performer_ids.includes(p.id));
   const author = players.find((p) => p.id === challenge.created_by);
   const amPerformer = challenge.performer_ids.includes(me.id);
   const isSecret = challengeIsSecret(challenge);
   const shouldHideFromViewer = isSecret && !amPerformer;
   const visibleDescription = shouldHideFromViewer ? "Secret challenge" : challenge.description;
-  const stageTheme = getStageTheme(challenge, "performing");
 
   async function done() {
     await supabase.from("rooms").update({ phase: "voting" }).eq("id", room.id);
@@ -681,68 +555,49 @@ function PerformingPhase({
   }
 
   return (
-    <div className="overflow-hidden rounded-[2rem] text-white shadow-pop" style={getStageStyle(stageTheme)}>
-      <div className="border-b border-white/10 px-6 py-5 sm:px-8">
-        <p className="text-sm font-bold uppercase tracking-[0.35em] text-white/55">Challenge reveal</p>
-        <div className={`mt-4 grid gap-3 ${isHost ? "lg:grid-cols-2" : "sm:grid-cols-2"}`}>
-          <div className="rounded-[1.5rem] px-5 py-4" style={{ background: stageTheme.panel }}>
-            <p className="text-xs font-bold uppercase tracking-[0.32em] text-white/55">From</p>
-            <p className="mt-3 text-2xl font-extrabold text-white">{author?.nickname ?? "Someone"}</p>
-          </div>
-          <div className="rounded-[1.5rem] px-5 py-4" style={{ background: stageTheme.accent, color: stageTheme.accentText }}>
-            <p className="text-xs font-bold uppercase tracking-[0.32em] opacity-65">To</p>
-            <p className="mt-3 text-2xl font-extrabold">{performerNames(challenge, players)}</p>
-          </div>
+    <Card>
+      <div className={`mb-5 grid gap-3 ${isHost ? "lg:grid-cols-2" : "sm:grid-cols-2"}`}>
+        <div className="rounded-2xl bg-muted px-5 py-4">
+          <p className="text-xs font-bold uppercase tracking-[0.3em] text-muted-foreground">From</p>
+          <p className="mt-2 text-2xl font-extrabold text-card-foreground">{author?.nickname ?? "Someone"}</p>
+        </div>
+        <div className="rounded-2xl bg-primary px-5 py-4 text-primary-foreground">
+          <p className="text-xs font-bold uppercase tracking-[0.3em] opacity-80">To</p>
+          <p className="mt-2 text-2xl font-extrabold">{performers.map((p) => p.nickname).join(" + ")}</p>
         </div>
       </div>
-
-      <div className="px-6 py-7 sm:px-8 sm:py-8">
-        <div className="rounded-[2rem] px-6 py-8" style={{ background: shouldHideFromViewer ? stageTheme.panelStrong : stageTheme.panel }}>
-          {isSecret && !amPerformer ? (
-            <div className="flex flex-col items-center justify-center gap-4 text-center">
-              <EyeOff className="h-12 w-12" style={{ color: stageTheme.accent }} />
-              <p className={`${isHost ? "text-5xl leading-tight" : "text-2xl"} font-extrabold`}>Secret challenge</p>
-              <p className="max-w-2xl text-base font-semibold text-white/72">Only the performers can see the exact challenge. Everyone else votes after the performance.</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <p className="text-sm font-bold uppercase tracking-[0.35em] text-white/50">What they must do</p>
-              <p className={`${isHost ? "text-5xl leading-tight" : "text-2xl"} max-w-4xl font-extrabold text-white`}>
-                {visibleDescription}
-              </p>
-            </div>
-          )}
-        </div>
+      <div className={`rounded-2xl ${isSecret && !amPerformer ? "bg-card-foreground text-white" : "bg-muted text-card-foreground"} px-5 py-6`}>
+        {isSecret && !amPerformer ? (
+          <div className="flex flex-col items-center justify-center gap-4 text-center">
+            <EyeOff className="h-12 w-12" />
+            <p className={`${isHost ? "text-5xl leading-tight" : "text-2xl"} font-extrabold`}>Secret challenge</p>
+            <p className="text-base font-semibold text-white/75">Only the performers can see the exact challenge.</p>
+          </div>
+        ) : (
+          <p className={`${isHost ? "text-5xl leading-tight" : "text-2xl"} font-bold`}>
+            {visibleDescription}
+          </p>
+        )}
       </div>
-
       {amPerformer ? (
-        <div className="px-6 pb-6 sm:px-8 sm:pb-8">
-          <button
-            onClick={done}
-            className="w-full rounded-[1.35rem] px-4 py-4 text-xl font-bold shadow-tile"
-            style={{ background: stageTheme.accent, color: stageTheme.accentText }}
-          >
-            We're done! Start voting →
-          </button>
-        </div>
+        <button onClick={done} className="mt-5 w-full rounded-xl bg-secondary px-4 py-4 text-xl font-bold text-secondary-foreground shadow-tile">
+          We're done! Start voting →
+        </button>
       ) : isHost ? (
-        <div className="grid gap-4 border-t border-white/10 px-6 py-6 sm:px-8 lg:grid-cols-[1.15fr_0.85fr]">
-          <div className="rounded-[2rem] px-8 py-10 text-center text-white" style={{ background: stageTheme.panel }}>
+        <div className="mt-6 grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+          <div className="rounded-[2rem] border border-white/10 bg-white/8 px-8 py-10 text-center text-white shadow-pop backdrop-blur">
             <p className="text-sm font-bold uppercase tracking-[0.35em] text-white/65">Now performing</p>
-            <p className="mt-4 text-4xl font-extrabold">{performerNames(challenge, players)}</p>
+            <p className="mt-4 text-4xl font-extrabold">{performers.map((p) => p.nickname).join(" + ")}</p>
             <p className="mt-5 text-2xl font-semibold text-white/75">{isSecret ? "Secret challenge in progress" : "Watch the challenge on stage"}</p>
           </div>
-          <div
-            className="rounded-[2rem] px-8 py-10 text-center text-4xl font-extrabold shadow-tile"
-            style={{ background: stageTheme.accent, color: stageTheme.accentText, boxShadow: `0 0 0 1px rgba(255,255,255,0.05), 0 0 48px ${stageTheme.halo}` }}
-          >
+          <div className="rounded-[2rem] bg-primary px-8 py-10 text-center text-4xl font-extrabold text-primary-foreground shadow-tile">
             Make some noise
           </div>
         </div>
       ) : (
-        <p className="px-6 pb-6 text-center text-sm text-white/65 sm:px-8 sm:pb-8">Watch carefully — voting opens when they're done.</p>
+        <p className="mt-5 text-center text-sm text-muted-foreground">Watch carefully — voting opens when they're done.</p>
       )}
-    </div>
+    </Card>
   );
 }
 
@@ -762,7 +617,6 @@ function VotingPhase({
   const isHost = me.is_host;
   const isSecret = challengeIsSecret(challenge);
   const shouldHideFromViewer = isSecret && !isPerformer;
-  const stageTheme = getStageTheme(challenge, "voting");
 
   async function vote(rating: number) {
     if (myVote || isPerformer) return;
@@ -802,82 +656,64 @@ function VotingPhase({
   const voteProgress = eligibleVoters.length > 0 ? Math.round((votes.length / eligibleVoters.length) * 100) : 0;
 
   return (
-    <div className="overflow-hidden rounded-[2rem] text-white shadow-pop" style={getStageStyle(stageTheme)}>
-      <div className="border-b border-white/10 px-6 py-5 sm:px-8">
-        <p className="text-sm font-bold uppercase tracking-[0.35em] text-white/55">
-          Vote 1–5 · {pendingCount} more after this
-        </p>
-        <div className={`mt-4 grid gap-3 ${isHost ? "lg:grid-cols-2" : "sm:grid-cols-2"}`}>
-          <div className="rounded-[1.5rem] px-5 py-4" style={{ background: stageTheme.panel }}>
-            <p className="text-xs font-bold uppercase tracking-[0.32em] text-white/55">From</p>
-            <p className="mt-3 text-2xl font-extrabold text-white">{players.find((p) => p.id === challenge.created_by)?.nickname ?? "Someone"}</p>
-          </div>
-          <div className="rounded-[1.5rem] px-5 py-4" style={{ background: stageTheme.accent, color: stageTheme.accentText }}>
-            <p className="text-xs font-bold uppercase tracking-[0.32em] opacity-65">To</p>
-            <p className="mt-3 text-2xl font-extrabold">{performerNames(challenge, players)}</p>
-          </div>
+    <Card>
+      <p className="mb-1 text-sm font-bold uppercase tracking-wider text-muted-foreground">
+        Vote 1–5 ⭐ · {pendingCount} more after this
+      </p>
+      <div className={`mb-5 grid gap-3 ${isHost ? "lg:grid-cols-2" : "sm:grid-cols-2"}`}>
+        <div className="rounded-2xl bg-muted px-5 py-4">
+          <p className="text-xs font-bold uppercase tracking-[0.3em] text-muted-foreground">From</p>
+          <p className="mt-2 text-2xl font-extrabold text-card-foreground">{players.find((p) => p.id === challenge.created_by)?.nickname ?? "Someone"}</p>
+        </div>
+        <div className="rounded-2xl bg-primary px-5 py-4 text-primary-foreground">
+          <p className="text-xs font-bold uppercase tracking-[0.3em] opacity-80">To</p>
+          <p className="mt-2 text-2xl font-extrabold">{challenge.performer_ids.map((id) => players.find((p) => p.id === id)?.nickname).join(" + ")}</p>
         </div>
       </div>
-
-      <div className="px-6 py-7 sm:px-8">
-        <div className="rounded-[2rem] px-6 py-8" style={{ background: shouldHideFromViewer ? stageTheme.panelStrong : stageTheme.panel }}>
-          {shouldHideFromViewer ? (
-            <div className="flex flex-col items-center justify-center gap-3 text-center">
-              <EyeOff className="h-10 w-10" style={{ color: stageTheme.accent }} />
-              <p className={`${isHost ? "text-4xl" : "text-2xl"} font-extrabold`}>Secret challenge</p>
-              <p className="text-sm font-semibold text-white/68">Vote based on how good the moment was, not the prompt itself.</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <p className="text-sm font-bold uppercase tracking-[0.35em] text-white/50">Audience score</p>
-              <h2 className={`font-extrabold text-white ${isHost ? "text-5xl leading-tight" : "text-2xl"}`}>{challenge.description}</h2>
-            </div>
-          )}
-        </div>
+      <div className={`mb-5 rounded-2xl ${shouldHideFromViewer ? "bg-card-foreground text-white" : "bg-muted text-card-foreground"} px-5 py-6`}>
+        {shouldHideFromViewer ? (
+          <div className="flex flex-col items-center justify-center gap-3 text-center">
+            <EyeOff className="h-10 w-10" />
+            <p className={`${isHost ? "text-4xl" : "text-2xl"} font-extrabold`}>Secret challenge</p>
+          </div>
+        ) : (
+          <h2 className={`font-bold ${isHost ? "text-5xl" : "text-2xl"}`}>{challenge.description}</h2>
+        )}
       </div>
 
       {isHost ? (
-        <div className="grid gap-5 border-t border-white/10 px-6 py-6 sm:px-8 lg:grid-cols-[1.2fr_0.8fr]">
-          <div className="rounded-[2rem] px-8 py-10 text-white" style={{ background: stageTheme.panel }}>
+        <div className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
+          <div className="rounded-[2rem] border border-white/10 bg-white/8 px-8 py-10 text-white shadow-pop backdrop-blur">
             <p className="text-sm font-bold uppercase tracking-[0.35em] text-white/65">Audience voting</p>
             <p className="mt-4 text-6xl font-extrabold">{votes.length}<span className="text-3xl text-white/70">/{eligibleVoters.length}</span></p>
             <div className="mt-6 h-6 overflow-hidden rounded-full bg-black/20">
-              <div className="h-full rounded-full transition-all" style={{ width: `${voteProgress}%`, background: stageTheme.accent }} />
+              <div className="h-full rounded-full bg-secondary transition-all" style={{ width: `${voteProgress}%` }} />
             </div>
             <p className="mt-4 text-2xl font-semibold text-white/75">{isSecret ? "Phones are scoring a secret challenge" : "Phones are scoring this performance right now"}</p>
           </div>
-          <div
-            className="rounded-[2rem] px-8 py-10 text-center shadow-tile"
-            style={{ background: stageTheme.accent, color: stageTheme.accentText, boxShadow: `0 0 0 1px rgba(255,255,255,0.05), 0 0 48px ${stageTheme.halo}` }}
-          >
+          <div className="rounded-[2rem] bg-primary px-8 py-10 text-center text-primary-foreground shadow-tile">
             <p className="text-sm font-bold uppercase tracking-[0.3em] opacity-80">Live progress</p>
             <p className="mt-4 text-stroke text-8xl font-extrabold">{voteProgress}%</p>
           </div>
         </div>
       ) : isPerformer ? (
-        <p className="mx-6 mb-6 rounded-[1.5rem] px-4 py-6 text-center font-semibold text-white/72 sm:mx-8 sm:mb-8" style={{ background: stageTheme.panel }}>
+        <p className="rounded-xl bg-muted px-4 py-6 text-center font-semibold text-muted-foreground">
           You can't vote for yourself 😉 Waiting for the audience…
         </p>
       ) : myVote ? (
-        <p className="mx-6 mb-6 rounded-[1.5rem] px-4 py-6 text-center text-xl font-bold shadow-tile sm:mx-8 sm:mb-8" style={{ background: stageTheme.accent, color: stageTheme.accentText }}>
+        <p className="rounded-xl bg-fun-green px-4 py-6 text-center text-xl font-bold text-white shadow-tile">
           You gave {myVote.rating} ⭐ — waiting for others…
         </p>
       ) : (
-        <div className="grid grid-cols-5 gap-2 px-6 pb-3 sm:px-8">
+        <div className="grid grid-cols-5 gap-2">
           {[1, 2, 3, 4, 5].map((n) => {
-            const colors = [
-              "linear-gradient(145deg, #5b2730, #2b1621)",
-              "linear-gradient(145deg, #7a2f63, #34172d)",
-              "linear-gradient(145deg, #66511a, #2f2612)",
-              "linear-gradient(145deg, #214562, #142331)",
-              "linear-gradient(145deg, #1d5c53, #112a2a)",
-            ];
+            const colors = ["bg-fun-orange", "bg-fun-pink", "bg-fun-yellow", "bg-fun-blue", "bg-fun-green"];
             return (
               <button
                 key={n}
                 onClick={() => vote(n)}
-                className="flex aspect-square flex-col items-center justify-center rounded-[1.35rem] text-3xl font-extrabold text-white shadow-tile transition-transform active:translate-y-1"
-                style={{ textShadow: "0 1px 0 rgba(0,0,0,0.3)", background: colors[n - 1], border: "1px solid rgba(255,255,255,0.08)" }}
+                className={`${colors[n - 1]} flex aspect-square flex-col items-center justify-center rounded-2xl text-3xl font-extrabold text-white shadow-tile transition-transform active:translate-y-1`}
+                style={{ textShadow: "0 1px 0 rgba(0,0,0,0.3)" }}
               >
                 {n}
                 <Star className="mt-1 h-4 w-4 fill-white" />
@@ -887,10 +723,10 @@ function VotingPhase({
         </div>
       )}
 
-      <p className="mt-4 pb-6 text-center text-xs text-white/58 sm:pb-8">
+      <p className="mt-4 text-center text-xs text-muted-foreground">
         {votes.length} / {eligibleVoters.length} votes in
       </p>
-    </div>
+    </Card>
   );
 }
 
