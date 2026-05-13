@@ -321,10 +321,28 @@ function SubmittingPhase({
   players: Player[]; me: Player; room: Room;
   roundChallenges: Challenge[]; isHost: boolean;
 }) {
-  if (isHost) {
-    const submittedIds = new Set(roundChallenges.map((c) => c.created_by));
-    const allSubmitted = players.length > 0 && players.every((p) => submittedIds.has(p.id));
+  const submittedIds = new Set(roundChallenges.map((c) => c.created_by));
+  const allSubmitted = players.length > 0 && players.every((p) => submittedIds.has(p.id));
 
+  // Auto-advance when every participant submitted. Host triggers to avoid races.
+  useEffect(() => {
+    if (!allSubmitted || roundChallenges.length === 0) return;
+    if (!isHost) return;
+    (async () => {
+      const first = [...roundChallenges].sort(
+        (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      )[0];
+      if (!first) return;
+      await supabase
+        .from("rooms")
+        .update({ phase: "performing", current_challenge_id: first.id })
+        .eq("id", room.id);
+      await supabase.from("challenges").update({ status: "performing" }).eq("id", first.id);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allSubmitted, isHost, room.id, roundChallenges.length]);
+
+  if (isHost) {
     return (
       <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
         <div className="rounded-[2rem] border border-white/10 bg-white/8 p-10 text-white shadow-pop backdrop-blur">
@@ -371,25 +389,6 @@ function SubmittingPhase({
   }
 
   const mySubmission = roundChallenges.find((c) => c.created_by === me.id);
-  const submittedIds = new Set(roundChallenges.map((c) => c.created_by));
-  const allSubmitted = players.every((p) => submittedIds.has(p.id));
-
-  // Any client auto-advances when everyone submitted (idempotent)
-  useEffect(() => {
-    if (!allSubmitted || roundChallenges.length === 0) return;
-    if (!isHost) return; // only host triggers to avoid races
-    (async () => {
-      const first = [...roundChallenges].sort(
-        (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-      )[0];
-      await supabase
-        .from("rooms")
-        .update({ phase: "performing", current_challenge_id: first.id })
-        .eq("id", room.id);
-      await supabase.from("challenges").update({ status: "performing" }).eq("id", first.id);
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allSubmitted]);
 
   return (
     <div className="space-y-4">
