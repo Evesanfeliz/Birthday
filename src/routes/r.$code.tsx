@@ -19,6 +19,8 @@ import {
   LogOut,
   Send,
   Sparkles,
+  EyeOff,
+  UserRound,
 } from "lucide-react";
 
 export const Route = createFileRoute("/r/$code")({
@@ -33,6 +35,10 @@ type Room = {
   current_challenge_id: string | null;
   host_player_id: string | null;
 };
+
+function challengeIsSecret(challenge: Challenge) {
+  return Boolean((challenge as Challenge & { is_secret?: boolean }).is_secret);
+}
 
 function RoomPage() {
   const { code } = Route.useParams();
@@ -437,6 +443,7 @@ function SubmitChallengeForm({
 }: { players: Player[]; me: Player; room: Room }) {
   const [description, setDescription] = useState(pickRandomChallenge());
   const [selected, setSelected] = useState<string[]>([]);
+  const [isSecret, setIsSecret] = useState(false);
   const [busy, setBusy] = useState(false);
 
   function toggle(id: string) {
@@ -451,6 +458,7 @@ function SubmitChallengeForm({
       created_by: me.id,
       performer_ids: selected,
       description: description.trim().slice(0, 280),
+      is_secret: isSecret,
       status: "pending",
       round: room.round,
     } as any);
@@ -506,6 +514,17 @@ function SubmitChallengeForm({
       </div>
 
       <button
+        type="button"
+        onClick={() => setIsSecret((current) => !current)}
+        className={isSecret
+          ? "mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-card-foreground px-4 py-3 text-sm font-bold text-white shadow-tile"
+          : "mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-muted px-4 py-3 text-sm font-bold text-card-foreground shadow-tile"}
+      >
+        <EyeOff className="h-4 w-4" />
+        {isSecret ? "Secret challenge enabled" : "Make this a secret challenge"}
+      </button>
+
+      <button
         onClick={submit}
         disabled={busy || selected.length === 0 || !description.trim()}
         className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-4 text-xl font-bold text-primary-foreground shadow-tile disabled:opacity-50"
@@ -526,6 +545,9 @@ function PerformingPhase({
   const performers = players.filter((p) => challenge.performer_ids.includes(p.id));
   const author = players.find((p) => p.id === challenge.created_by);
   const amPerformer = challenge.performer_ids.includes(me.id);
+  const isSecret = challengeIsSecret(challenge);
+  const shouldHideFromViewer = isSecret && !amPerformer;
+  const visibleDescription = shouldHideFromViewer ? "Secret challenge" : challenge.description;
 
   async function done() {
     await supabase.from("rooms").update({ phase: "voting" }).eq("id", room.id);
@@ -534,18 +556,29 @@ function PerformingPhase({
 
   return (
     <Card>
-      <p className="mb-1 text-sm font-bold uppercase tracking-wider text-muted-foreground">
-        Challenge from {author?.nickname ?? "someone"} 🎭
-      </p>
-      <h2 className={`mb-3 flex flex-wrap gap-1 font-bold ${isHost ? "text-5xl" : "text-2xl"}`}>
-        Performers:{" "}
-        {performers.map((p) => (
-          <span key={p.id} className="rounded-lg bg-primary px-2 py-0.5 text-primary-foreground">{p.nickname}</span>
-        ))}
-      </h2>
-      <p className={`rounded-2xl bg-muted px-5 py-6 font-bold text-card-foreground ${isHost ? "text-5xl leading-tight" : "text-2xl"}`}>
-        {challenge.description}
-      </p>
+      <div className={`mb-5 grid gap-3 ${isHost ? "lg:grid-cols-2" : "sm:grid-cols-2"}`}>
+        <div className="rounded-2xl bg-muted px-5 py-4">
+          <p className="text-xs font-bold uppercase tracking-[0.3em] text-muted-foreground">From</p>
+          <p className="mt-2 text-2xl font-extrabold text-card-foreground">{author?.nickname ?? "Someone"}</p>
+        </div>
+        <div className="rounded-2xl bg-primary px-5 py-4 text-primary-foreground">
+          <p className="text-xs font-bold uppercase tracking-[0.3em] opacity-80">To</p>
+          <p className="mt-2 text-2xl font-extrabold">{performers.map((p) => p.nickname).join(" + ")}</p>
+        </div>
+      </div>
+      <div className={`rounded-2xl ${isSecret && !amPerformer ? "bg-card-foreground text-white" : "bg-muted text-card-foreground"} px-5 py-6`}>
+        {isSecret && !amPerformer ? (
+          <div className="flex flex-col items-center justify-center gap-4 text-center">
+            <EyeOff className="h-12 w-12" />
+            <p className={`${isHost ? "text-5xl leading-tight" : "text-2xl"} font-extrabold`}>Secret challenge</p>
+            <p className="text-base font-semibold text-white/75">Only the performers can see the exact challenge.</p>
+          </div>
+        ) : (
+          <p className={`${isHost ? "text-5xl leading-tight" : "text-2xl"} font-bold`}>
+            {visibleDescription}
+          </p>
+        )}
+      </div>
       {amPerformer ? (
         <button onClick={done} className="mt-5 w-full rounded-xl bg-secondary px-4 py-4 text-xl font-bold text-secondary-foreground shadow-tile">
           We're done! Start voting →
@@ -555,7 +588,7 @@ function PerformingPhase({
           <div className="rounded-[2rem] border border-white/10 bg-white/8 px-8 py-10 text-center text-white shadow-pop backdrop-blur">
             <p className="text-sm font-bold uppercase tracking-[0.35em] text-white/65">Now performing</p>
             <p className="mt-4 text-4xl font-extrabold">{performers.map((p) => p.nickname).join(" + ")}</p>
-            <p className="mt-5 text-2xl font-semibold text-white/75">Watch the challenge on stage</p>
+            <p className="mt-5 text-2xl font-semibold text-white/75">{isSecret ? "Secret challenge in progress" : "Watch the challenge on stage"}</p>
           </div>
           <div className="rounded-[2rem] bg-primary px-8 py-10 text-center text-4xl font-extrabold text-primary-foreground shadow-tile">
             Make some noise
@@ -582,6 +615,8 @@ function VotingPhase({
   const eligibleVoters = players.filter((p) => !challenge.performer_ids.includes(p.id));
   const allVoted = eligibleVoters.length > 0 && eligibleVoters.every((p) => votes.some((v) => v.voter_id === p.id));
   const isHost = me.is_host;
+  const isSecret = challengeIsSecret(challenge);
+  const shouldHideFromViewer = isSecret && !isPerformer;
 
   async function vote(rating: number) {
     if (myVote || isPerformer) return;
@@ -625,10 +660,26 @@ function VotingPhase({
       <p className="mb-1 text-sm font-bold uppercase tracking-wider text-muted-foreground">
         Vote 1–5 ⭐ · {pendingCount} more after this
       </p>
-      <h2 className={`mb-1 font-bold ${isHost ? "text-5xl" : "text-2xl"}`}>{challenge.description}</h2>
-      <p className="mb-5 text-sm text-muted-foreground">
-        Performed by {challenge.performer_ids.map((id) => players.find((p) => p.id === id)?.nickname).join(", ")}
-      </p>
+      <div className={`mb-5 grid gap-3 ${isHost ? "lg:grid-cols-2" : "sm:grid-cols-2"}`}>
+        <div className="rounded-2xl bg-muted px-5 py-4">
+          <p className="text-xs font-bold uppercase tracking-[0.3em] text-muted-foreground">From</p>
+          <p className="mt-2 text-2xl font-extrabold text-card-foreground">{players.find((p) => p.id === challenge.created_by)?.nickname ?? "Someone"}</p>
+        </div>
+        <div className="rounded-2xl bg-primary px-5 py-4 text-primary-foreground">
+          <p className="text-xs font-bold uppercase tracking-[0.3em] opacity-80">To</p>
+          <p className="mt-2 text-2xl font-extrabold">{challenge.performer_ids.map((id) => players.find((p) => p.id === id)?.nickname).join(" + ")}</p>
+        </div>
+      </div>
+      <div className={`mb-5 rounded-2xl ${shouldHideFromViewer ? "bg-card-foreground text-white" : "bg-muted text-card-foreground"} px-5 py-6`}>
+        {shouldHideFromViewer ? (
+          <div className="flex flex-col items-center justify-center gap-3 text-center">
+            <EyeOff className="h-10 w-10" />
+            <p className={`${isHost ? "text-4xl" : "text-2xl"} font-extrabold`}>Secret challenge</p>
+          </div>
+        ) : (
+          <h2 className={`font-bold ${isHost ? "text-5xl" : "text-2xl"}`}>{challenge.description}</h2>
+        )}
+      </div>
 
       {isHost ? (
         <div className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
@@ -638,7 +689,7 @@ function VotingPhase({
             <div className="mt-6 h-6 overflow-hidden rounded-full bg-black/20">
               <div className="h-full rounded-full bg-secondary transition-all" style={{ width: `${voteProgress}%` }} />
             </div>
-            <p className="mt-4 text-2xl font-semibold text-white/75">Phones are scoring this performance right now</p>
+            <p className="mt-4 text-2xl font-semibold text-white/75">{isSecret ? "Phones are scoring a secret challenge" : "Phones are scoring this performance right now"}</p>
           </div>
           <div className="rounded-[2rem] bg-primary px-8 py-10 text-center text-primary-foreground shadow-tile">
             <p className="text-sm font-bold uppercase tracking-[0.3em] opacity-80">Live progress</p>
@@ -708,10 +759,11 @@ function ResultsPhase({
         <ul className="mt-2 space-y-2">
           {done.map((c) => {
             const author = players.find((p) => p.id === c.created_by);
+            const isSecret = challengeIsSecret(c);
             return (
               <li key={c.id} className="rounded-xl bg-muted px-4 py-3">
                 <div className="flex items-center justify-between gap-2">
-                  <p className="font-bold">{c.description}</p>
+                  <p className="font-bold">{isSecret ? `Secret challenge for ${c.performer_ids.map((id) => players.find((p) => p.id === id)?.nickname).join(" + ")}` : c.description}</p>
                   <span className="shrink-0 rounded-lg bg-primary px-2 py-0.5 text-sm font-extrabold text-primary-foreground">
                     {Number(c.avg_rating).toFixed(1)} ⭐
                   </span>

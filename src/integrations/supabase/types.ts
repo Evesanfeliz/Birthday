@@ -21,6 +21,7 @@ export type Database = {
           created_by: string | null
           description: string
           id: string
+          is_secret: boolean
           performer_ids: string[]
           room_id: string
           round: number
@@ -32,6 +33,7 @@ export type Database = {
           created_by?: string | null
           description: string
           id?: string
+          is_secret?: boolean
           performer_ids?: string[]
           room_id: string
           round?: number
@@ -43,6 +45,7 @@ export type Database = {
           created_by?: string | null
           description?: string
           id?: string
+          is_secret?: boolean
           performer_ids?: string[]
           room_id?: string
           round?: number
