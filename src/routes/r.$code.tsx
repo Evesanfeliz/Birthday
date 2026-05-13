@@ -64,6 +64,7 @@ function RoomPage() {
   const r = room as Room;
   const currentChallenge = challenges.find((c) => c.id === r.current_challenge_id) || null;
   const isHost = me.is_host;
+  const participants = players.filter((p) => !p.is_host);
   const roundChallenges = challenges.filter((c) => (c as any).round === r.round);
 
   return (
@@ -72,18 +73,18 @@ function RoomPage() {
         <Header code={code} me={me} round={r.round} phase={r.phase} onLeave={() => { clearPlayer(code); navigate({ to: "/" }); }} />
 
         {r.phase === "lobby" && (
-          <Lobby code={code} players={players} me={me} room={r} isHost={isHost} />
+          <Lobby code={code} players={participants} me={me} room={r} isHost={isHost} />
         )}
         {r.phase === "submitting" && (
-          <SubmittingPhase players={players} me={me} room={r} roundChallenges={roundChallenges} isHost={isHost} />
+          <SubmittingPhase players={participants} me={me} room={r} roundChallenges={roundChallenges} isHost={isHost} />
         )}
         {r.phase === "performing" && currentChallenge && (
-          <PerformingPhase challenge={currentChallenge} players={players} me={me} room={r} />
+          <PerformingPhase challenge={currentChallenge} players={participants} me={me} room={r} isHost={isHost} />
         )}
         {r.phase === "voting" && currentChallenge && (
           <VotingPhase
             challenge={currentChallenge}
-            players={players}
+            players={participants}
             me={me}
             room={r}
             roundChallenges={roundChallenges}
@@ -92,7 +93,7 @@ function RoomPage() {
         )}
         {r.phase === "results" && (
           <ResultsPhase
-            players={players}
+            players={participants}
             me={me}
             room={r}
             roundChallenges={roundChallenges}
@@ -123,7 +124,7 @@ function Header({ code, me, round, phase, onLeave }: { code: string; me: Player;
           </span>
         )}
         <span className="text-sm font-semibold text-foreground/80">
-          {me.nickname} {me.is_host && <Crown className="inline h-4 w-4 text-secondary" />}
+          {me.is_host ? "Host screen" : me.nickname} {me.is_host && <Crown className="inline h-4 w-4 text-secondary" />}
         </span>
       </div>
       <button
@@ -239,7 +240,7 @@ function Lobby({
           <p className="text-center text-sm text-muted-foreground">Waiting for the host to start…</p>
         )}
         {players.length < 2 && isHost && (
-          <p className="mt-2 text-center text-xs text-muted-foreground">Tip: solo mode works for testing — invite friends for the real party!</p>
+          <p className="mt-2 text-center text-xs text-muted-foreground">Need at least 2 players to feel like a real party.</p>
         )}
       </div>
     </div>
@@ -254,6 +255,45 @@ function SubmittingPhase({
   players: Player[]; me: Player; room: Room;
   roundChallenges: Challenge[]; isHost: boolean;
 }) {
+  if (isHost) {
+    const submittedIds = new Set(roundChallenges.map((c) => c.created_by));
+    const allSubmitted = players.length > 0 && players.every((p) => submittedIds.has(p.id));
+
+    return (
+      <div className="space-y-4">
+        <Card>
+          <h2 className="text-3xl font-bold">Everyone is sending a secret challenge 🤫</h2>
+          <p className="mt-2 text-muted-foreground">Players submit on their phones. Challenges stay hidden until it is their turn.</p>
+          <div className="mt-5 text-center">
+            <p className="text-6xl font-extrabold text-secondary">{roundChallenges.length}/{players.length}</p>
+            <p className="mt-2 text-sm font-bold uppercase tracking-wider text-muted-foreground">submissions in</p>
+          </div>
+        </Card>
+
+        <Card>
+          <ul className="space-y-2">
+            {players.map((p) => {
+              const ok = submittedIds.has(p.id);
+              return (
+                <li
+                  key={p.id}
+                  className={`flex items-center justify-between rounded-xl px-3 py-3 text-sm font-bold ${ok ? "bg-fun-green text-white" : "bg-muted text-card-foreground"}`}
+                  style={ok ? { textShadow: "0 1px 0 rgba(0,0,0,0.3)" } : {}}
+                >
+                  <span className="truncate">{p.nickname}</span>
+                  {ok ? <Check className="h-4 w-4" /> : <Loader2 className="h-4 w-4 animate-spin" />}
+                </li>
+              );
+            })}
+          </ul>
+          <p className="mt-4 text-center text-sm text-muted-foreground">
+            {allSubmitted ? "Starting soon..." : "Waiting for everyone to submit"}
+          </p>
+        </Card>
+      </div>
+    );
+  }
+
   const mySubmission = roundChallenges.find((c) => c.created_by === me.id);
   const submittedIds = new Set(roundChallenges.map((c) => c.created_by));
   const allSubmitted = players.every((p) => submittedIds.has(p.id));
@@ -360,7 +400,7 @@ function SubmitChallengeForm({
               className={`${color} rounded-xl px-3 py-3 text-left font-bold shadow-tile transition-all ${active ? "scale-95 ring-4 ring-foreground/40" : "hover:translate-y-0.5"}`}
               style={{ color: "white", textShadow: "0 1px 0 rgba(0,0,0,0.3)" }}
             >
-              {p.nickname}{p.id === me.id ? " (you)" : ""}
+              {p.nickname}
               {active && <Check className="mt-1 h-4 w-4" />}
             </button>
           );
@@ -406,7 +446,8 @@ function SubmitChallengeForm({
 
 function PerformingPhase({
   challenge, players, me, room,
-}: { challenge: Challenge; players: Player[]; me: Player; room: Room }) {
+  isHost,
+}: { challenge: Challenge; players: Player[]; me: Player; room: Room; isHost: boolean }) {
   const performers = players.filter((p) => challenge.performer_ids.includes(p.id));
   const author = players.find((p) => p.id === challenge.created_by);
   const amPerformer = challenge.performer_ids.includes(me.id);
@@ -434,6 +475,10 @@ function PerformingPhase({
         <button onClick={done} className="mt-5 w-full rounded-xl bg-secondary px-4 py-4 text-xl font-bold text-secondary-foreground shadow-tile">
           We're done! Start voting →
         </button>
+      ) : isHost ? (
+        <div className="mt-5 rounded-2xl bg-primary px-5 py-6 text-center text-2xl font-extrabold text-primary-foreground shadow-tile">
+          Watch the performance
+        </div>
       ) : (
         <p className="mt-5 text-center text-sm text-muted-foreground">Watch carefully — voting opens when they're done.</p>
       )}
@@ -502,7 +547,11 @@ function VotingPhase({
         Performed by {challenge.performer_ids.map((id) => players.find((p) => p.id === id)?.nickname).join(", ")}
       </p>
 
-      {isPerformer ? (
+      {isHost ? (
+        <div className="rounded-xl bg-primary px-4 py-6 text-center text-xl font-bold text-primary-foreground shadow-tile">
+          Audience voting in progress
+        </div>
+      ) : isPerformer ? (
         <p className="rounded-xl bg-muted px-4 py-6 text-center font-semibold text-muted-foreground">
           You can't vote for yourself 😉 Waiting for the audience…
         </p>
@@ -600,7 +649,7 @@ function ResultsPhase({
             >
               <span className="flex items-center gap-3">
                 <span className="w-6 text-center">{i + 1}</span>
-                <span>{p.nickname}{p.id === me.id ? " (you)" : ""}</span>
+                <span>{p.nickname}{p.id === me.id && !me.is_host ? " (you)" : ""}</span>
               </span>
               <span>{Number(p.score).toFixed(1)} ⭐</span>
             </li>
