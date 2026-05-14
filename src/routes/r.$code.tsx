@@ -118,6 +118,45 @@ function Center({ children }: { children: React.ReactNode }) {
 }
 
 function Header({ code, me, round, phase, onLeave }: { code: string; me: Player; round: number; phase: string; onLeave: () => void }) {
+  if (me.is_host) {
+    return (
+      <div className="mb-10 flex items-start justify-between gap-6">
+        <div className="flex-1" />
+
+        <div className="flex flex-1 justify-center">
+          <div className="relative flex h-[76px] w-[630px] items-center rounded-full bg-[rgba(88,20,119,0.82)] px-9 text-white shadow-[0_7px_0_rgba(74,16,99,0.65)]">
+            <div className="min-w-[178px]">
+              <p className="text-[13px] font-bold leading-none text-white/70">Game pin</p>
+              <p className="mt-1 text-[30px] font-extrabold leading-none tracking-[0.03em]">{code}</p>
+            </div>
+
+            {phase !== "lobby" ? (
+              <div className="absolute left-1/2 top-1/2 flex h-[94px] w-[94px] -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center rounded-full border-[4px] border-[rgba(100,45,129,0.9)] bg-white text-[rgba(40,17,67,1)] shadow-[0_6px_0_rgba(85,31,115,0.6)]">
+                <Crown className="mb-[2px] h-6 w-6 fill-secondary text-secondary" />
+                <span className="text-[13px] font-bold leading-none">Round</span>
+                <span className="mt-[2px] text-[36px] font-extrabold leading-none">{round}</span>
+              </div>
+            ) : null}
+
+            <div className="ml-auto min-w-[205px] text-left">
+              <p className="text-[17px] font-extrabold leading-none">{me.nickname} <span className="text-[18px]">👑</span></p>
+              <p className="mt-1 text-[17px] font-extrabold leading-none text-white/88">Host</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-1 justify-end">
+          <button
+            onClick={onLeave}
+            className="rounded-2xl bg-[rgba(113,47,69,0.92)] px-6 py-3 text-[20px] font-extrabold text-white shadow-[0_5px_0_rgba(80,30,47,0.7)] transition-colors hover:bg-[rgba(124,54,77,0.96)]"
+          >
+            <span className="inline-flex items-center gap-2"><LogOut className="h-5 w-5" /> Leave</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="mb-6 flex items-center justify-between">
       <div className="flex items-center gap-2">
@@ -554,6 +593,62 @@ function PerformingPhase({
     await supabase.from("challenges").update({ status: "voting" }).eq("id", challenge.id);
   }
 
+  if (isHost) {
+    return (
+      <div className="mx-auto max-w-[1180px] rounded-[2rem] bg-transparent text-[rgba(43,19,74,1)]">
+        <div className="rounded-[1.95rem] border-[5px] border-[rgba(109,57,184,0.95)] bg-white p-6 shadow-[0_14px_0_rgba(79,27,126,0.58)]">
+          <div className="rounded-[1.85rem] border-[5px] border-[rgba(255,43,123,0.98)] bg-white px-10 py-8 text-center shadow-[6px_8px_0_rgba(99,45,162,0.8)]">
+            {shouldHideFromViewer ? (
+              <div className="flex min-h-[184px] flex-col items-center justify-center gap-3">
+                <EyeOff className="h-14 w-14 text-[rgba(61,31,112,1)]" />
+                <p className="text-[52px] font-extrabold leading-[1.02] tracking-[-0.04em]">Secret challenge</p>
+              </div>
+            ) : (
+              <p className="mx-auto max-w-[760px] text-[62px] font-extrabold leading-[0.98] tracking-[-0.05em]">
+                {visibleDescription}
+              </p>
+            )}
+          </div>
+
+          <div className="mt-16 grid items-center gap-10 lg:grid-cols-[1fr_160px_1fr]">
+            <div className="relative rounded-[2.15rem] border-[4px] border-[rgba(85,46,130,0.92)] bg-white px-8 py-5 shadow-[0_7px_0_rgba(84,38,130,0.65)]">
+              <div className="absolute left-[18px] top-[-28px] h-0 w-0 border-x-[18px] border-b-[30px] border-x-transparent border-b-white drop-shadow-[0_-2px_0_rgba(85,46,130,0.92)]" />
+              <div className="flex items-center gap-4 pr-8">
+                <div className="absolute -left-6 top-1/2 flex h-[92px] w-[92px] -translate-y-1/2 items-center justify-center rounded-full border-[4px] border-[rgba(85,46,130,0.92)] bg-white text-[52px] shadow-[0_6px_0_rgba(84,38,130,0.45)]">
+                  🥳
+                </div>
+                <div>
+                  <p className="pl-16 text-[16px] font-extrabold uppercase tracking-[0.15em] text-[rgba(117,108,138,1)]">From</p>
+                  <p className="pl-16 text-[54px] font-extrabold leading-none">{author?.nickname ?? "Someone"}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-center">
+              <div className="relative h-[66px] w-[120px]">
+                <div className="absolute left-0 top-[11px] h-[44px] w-[84px] rounded-full border-[4px] border-[rgba(43,20,84,1)] bg-white" />
+                <div className="absolute right-[8px] top-0 h-[66px] w-[66px] rotate-45 border-r-[4px] border-t-[4px] border-[rgba(43,20,84,1)] bg-white" />
+              </div>
+            </div>
+
+            <div className="relative rounded-[2.15rem] border-[4px] border-[rgba(85,46,130,0.92)] bg-white px-8 py-5 shadow-[0_7px_0_rgba(84,38,130,0.65)]">
+              <div className="absolute right-[18px] top-[-28px] h-0 w-0 border-x-[18px] border-b-[30px] border-x-transparent border-b-white drop-shadow-[0_-2px_0_rgba(85,46,130,0.92)]" />
+              <div className="flex items-center justify-between gap-4 pl-8">
+                <div className="min-w-0 text-right">
+                  <p className="pr-16 text-[16px] font-extrabold uppercase tracking-[0.15em] text-[rgba(117,108,138,1)]">To</p>
+                  <p className="truncate pr-16 text-[54px] font-extrabold leading-none">{performers.map((p) => p.nickname).join(" + ")}</p>
+                </div>
+                <div className="absolute -right-6 top-1/2 flex h-[92px] w-[92px] -translate-y-1/2 items-center justify-center rounded-full border-[4px] border-[rgba(85,46,130,0.92)] bg-white text-[52px] shadow-[0_6px_0_rgba(84,38,130,0.45)]">
+                  🎭
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <Card>
       <div className={`mb-5 grid gap-3 ${isHost ? "lg:grid-cols-2" : "sm:grid-cols-2"}`}>
@@ -583,17 +678,6 @@ function PerformingPhase({
         <button onClick={done} className="mt-5 w-full rounded-xl bg-secondary px-4 py-4 text-xl font-bold text-secondary-foreground shadow-tile">
           We're done! Start voting →
         </button>
-      ) : isHost ? (
-        <div className="mt-6 grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
-          <div className="rounded-[2rem] border border-white/10 bg-white/8 px-8 py-10 text-center text-white shadow-pop backdrop-blur">
-            <p className="text-sm font-bold uppercase tracking-[0.35em] text-white/65">Now performing</p>
-            <p className="mt-4 text-4xl font-extrabold">{performers.map((p) => p.nickname).join(" + ")}</p>
-            <p className="mt-5 text-2xl font-semibold text-white/75">{isSecret ? "Secret challenge in progress" : "Watch the challenge on stage"}</p>
-          </div>
-          <div className="rounded-[2rem] bg-primary px-8 py-10 text-center text-4xl font-extrabold text-primary-foreground shadow-tile">
-            Make some noise
-          </div>
-        </div>
       ) : (
         <p className="mt-5 text-center text-sm text-muted-foreground">Watch carefully — voting opens when they're done.</p>
       )}
