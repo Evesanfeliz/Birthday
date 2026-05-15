@@ -30,6 +30,7 @@ export const Route = createFileRoute("/r/$code")({
 type Room = {
   id: string;
   code: string;
+  name: string;
   phase: string;
   round: number;
   current_challenge_id: string | null;
@@ -76,7 +77,7 @@ function RoomPage() {
   return (
     <main className="min-h-screen px-4 py-6 sm:py-10">
       <div className={isHost ? "mx-auto max-w-6xl" : "mx-auto max-w-3xl"}>
-        <Header code={code} me={me} round={r.round} phase={r.phase} onLeave={() => { clearPlayer(code); navigate({ to: "/" }); }} />
+        <Header room={r} code={code} me={me} round={r.round} phase={r.phase} onLeave={() => { clearPlayer(code); navigate({ to: "/" }); }} />
 
         {r.phase === "lobby" && (
           <Lobby code={code} players={participants} me={me} room={r} isHost={isHost} />
@@ -117,40 +118,41 @@ function Center({ children }: { children: React.ReactNode }) {
   return <div className="flex min-h-screen items-center justify-center px-6">{children}</div>;
 }
 
-function Header({ code, me, round, phase, onLeave }: { code: string; me: Player; round: number; phase: string; onLeave: () => void }) {
+function Header({ room, code, me, round, phase, onLeave }: { room: Room; code: string; me: Player; round: number; phase: string; onLeave: () => void }) {
   if (me.is_host) {
     return (
-      <div className="mb-10 flex items-start justify-between gap-6">
+      <div className="mb-9 flex items-start justify-between gap-6">
         <div className="flex-1" />
 
         <div className="flex flex-1 justify-center">
-          <div className="relative flex h-[76px] w-[630px] items-center rounded-full bg-[rgba(88,20,119,0.82)] px-9 text-white shadow-[0_7px_0_rgba(74,16,99,0.65)]">
-            <div className="min-w-[178px]">
+          <div className="relative flex h-[72px] w-[560px] items-center rounded-full bg-[rgba(88,20,119,0.82)] px-8 text-white shadow-[0_7px_0_rgba(74,16,99,0.65)]">
+            <div className="min-w-[155px]">
               <p className="text-[13px] font-bold leading-none text-white/70">Game pin</p>
-              <p className="mt-1 text-[30px] font-extrabold leading-none tracking-[0.03em]">{code}</p>
+              <p className="mt-1 text-[27px] font-extrabold leading-none tracking-[0.03em]">{code}</p>
             </div>
 
             {phase !== "lobby" ? (
-              <div className="absolute left-1/2 top-1/2 flex h-[94px] w-[94px] -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center rounded-full border-[4px] border-[rgba(100,45,129,0.9)] bg-white text-[rgba(40,17,67,1)] shadow-[0_6px_0_rgba(85,31,115,0.6)]">
-                <Crown className="mb-[2px] h-6 w-6 fill-secondary text-secondary" />
+              <div className="absolute left-1/2 top-1/2 flex h-[98px] w-[98px] -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center rounded-full border-[4px] border-[rgba(100,45,129,0.9)] bg-white text-[rgba(40,17,67,1)] shadow-[0_6px_0_rgba(85,31,115,0.6)]">
+                <Crown className="mb-[1px] h-6 w-6 fill-secondary text-secondary" />
                 <span className="text-[13px] font-bold leading-none">Round</span>
-                <span className="mt-[2px] text-[36px] font-extrabold leading-none">{round}</span>
+                <span className="mt-[2px] text-[38px] font-extrabold leading-none">{round}</span>
               </div>
             ) : null}
 
-            <div className="ml-auto min-w-[205px] text-left">
-              <p className="text-[17px] font-extrabold leading-none">{me.nickname} <span className="text-[18px]">👑</span></p>
-              <p className="mt-1 text-[17px] font-extrabold leading-none text-white/88">Host</p>
+            <div className="ml-auto min-w-[190px] text-left">
+              <p className="text-[18px] font-extrabold leading-none">{room.name}</p>
+              <p className="mt-[3px] text-[18px] font-extrabold leading-none">{me.nickname} <span className="text-[18px]">👑</span></p>
+              <p className="mt-[2px] text-[18px] font-extrabold leading-none text-white/88">Host</p>
             </div>
           </div>
         </div>
 
-        <div className="flex flex-1 justify-end">
+        <div className="flex flex-1 justify-end pt-1">
           <button
             onClick={onLeave}
-            className="rounded-2xl bg-[rgba(113,47,69,0.92)] px-6 py-3 text-[20px] font-extrabold text-white shadow-[0_5px_0_rgba(80,30,47,0.7)] transition-colors hover:bg-[rgba(124,54,77,0.96)]"
+            className="rounded-2xl bg-[rgba(113,47,69,0.92)] px-5 py-[10px] text-[17px] font-extrabold text-white shadow-[0_5px_0_rgba(80,30,47,0.7)] transition-colors hover:bg-[rgba(124,54,77,0.96)]"
           >
-            <span className="inline-flex items-center gap-2"><LogOut className="h-5 w-5" /> Leave</span>
+            <span className="inline-flex items-center gap-2"><LogOut className="h-[18px] w-[18px]" /> Leave</span>
           </button>
         </div>
       </div>
@@ -169,7 +171,7 @@ function Header({ code, me, round, phase, onLeave }: { code: string; me: Player;
           </span>
         )}
         <span className="text-sm font-semibold text-foreground/80">
-          {me.nickname} {me.is_host && <><Crown className="inline h-4 w-4 text-secondary" /> <span className="ml-1">Host</span></>}
+          {room.name} · {me.nickname} {me.is_host && <><Crown className="inline h-4 w-4 text-secondary" /> <span className="ml-1">Host</span></>}
         </span>
       </div>
       <button
@@ -251,6 +253,7 @@ function Lobby({
             <div>
               <p className="text-sm font-semibold text-white/60">Room PIN</p>
               <h2 className="mt-2 text-stroke text-7xl font-extrabold tracking-[0.25em]">{code}</h2>
+              <p className="mt-4 text-3xl font-extrabold text-white">{room.name}</p>
               <p className="mt-5 max-w-xl text-lg font-medium text-white/80">
                 Players join on their phones, pick a nickname, and wait for the first secret challenge round.
               </p>
@@ -312,6 +315,7 @@ function Lobby({
     <div className="grid gap-6 sm:grid-cols-2">
       <div className="rounded-3xl bg-card-pop p-6 text-card-foreground shadow-pop">
         <h2 className="mb-2 text-2xl font-bold">Scan to join</h2>
+        <p className="mb-1 text-lg font-bold text-card-foreground">{room.name}</p>
         <p className="mb-4 text-sm text-muted-foreground">Or share the code: <b>{code}</b></p>
         <div className="flex justify-center rounded-2xl bg-white p-4">
           <QRCodeSVG value={url} size={200} />
@@ -595,50 +599,51 @@ function PerformingPhase({
 
   if (isHost) {
     return (
-      <div className="mx-auto max-w-[1180px] rounded-[2rem] bg-transparent text-[rgba(43,19,74,1)]">
-        <div className="rounded-[1.95rem] border-[5px] border-[rgba(109,57,184,0.95)] bg-white p-6 shadow-[0_14px_0_rgba(79,27,126,0.58)]">
-          <div className="rounded-[1.85rem] border-[5px] border-[rgba(255,43,123,0.98)] bg-white px-10 py-8 text-center shadow-[6px_8px_0_rgba(99,45,162,0.8)]">
+      <div className="mx-auto max-w-[1120px] rounded-[2rem] bg-transparent text-[rgba(43,19,74,1)]">
+        <div className="rounded-[1.85rem] border-[5px] border-[rgba(109,57,184,0.95)] bg-white px-8 pb-8 pt-7 shadow-[0_13px_0_rgba(79,27,126,0.58)]">
+          <div className="mx-auto max-w-[960px] rounded-[1.7rem] border-[5px] border-[rgba(255,43,123,0.98)] bg-white px-8 py-10 text-center shadow-[8px_8px_0_rgba(99,45,162,0.8)]">
             {shouldHideFromViewer ? (
               <div className="flex min-h-[184px] flex-col items-center justify-center gap-3">
                 <EyeOff className="h-14 w-14 text-[rgba(61,31,112,1)]" />
                 <p className="text-[52px] font-extrabold leading-[1.02] tracking-[-0.04em]">Secret challenge</p>
               </div>
             ) : (
-              <p className="mx-auto max-w-[760px] text-[62px] font-extrabold leading-[0.98] tracking-[-0.05em]">
+              <p className="mx-auto max-w-[760px] text-[58px] font-extrabold leading-[0.98] tracking-[-0.05em]">
                 {visibleDescription}
               </p>
             )}
           </div>
 
-          <div className="mt-16 grid items-center gap-10 lg:grid-cols-[1fr_160px_1fr]">
-            <div className="relative rounded-[2.15rem] border-[4px] border-[rgba(85,46,130,0.92)] bg-white px-8 py-5 shadow-[0_7px_0_rgba(84,38,130,0.65)]">
-              <div className="absolute left-[18px] top-[-28px] h-0 w-0 border-x-[18px] border-b-[30px] border-x-transparent border-b-white drop-shadow-[0_-2px_0_rgba(85,46,130,0.92)]" />
-              <div className="flex items-center gap-4 pr-8">
-                <div className="absolute -left-6 top-1/2 flex h-[92px] w-[92px] -translate-y-1/2 items-center justify-center rounded-full border-[4px] border-[rgba(85,46,130,0.92)] bg-white text-[52px] shadow-[0_6px_0_rgba(84,38,130,0.45)]">
+          <div className="mt-14 grid items-center gap-8 lg:grid-cols-[320px_120px_320px] lg:justify-center">
+            <div className="relative rounded-[2rem] border-[4px] border-[rgba(85,46,130,0.92)] bg-white px-8 py-6 shadow-[0_7px_0_rgba(84,38,130,0.65)]">
+              <div className="absolute left-[22px] top-[-24px] h-0 w-0 border-x-[14px] border-b-[24px] border-x-transparent border-b-white drop-shadow-[0_-2px_0_rgba(85,46,130,0.92)]" />
+              <div className="flex items-center gap-4 pr-6">
+                <div className="absolute -left-7 top-1/2 flex h-[84px] w-[84px] -translate-y-1/2 items-center justify-center rounded-full border-[4px] border-[rgba(85,46,130,0.92)] bg-white text-[46px] shadow-[0_6px_0_rgba(84,38,130,0.45)]">
                   🥳
                 </div>
                 <div>
-                  <p className="pl-16 text-[16px] font-extrabold uppercase tracking-[0.15em] text-[rgba(117,108,138,1)]">From</p>
-                  <p className="pl-16 text-[54px] font-extrabold leading-none">{author?.nickname ?? "Someone"}</p>
+                  <p className="pl-14 text-[15px] font-extrabold uppercase tracking-[0.14em] text-[rgba(117,108,138,1)]">From</p>
+                  <p className="pl-14 text-[44px] font-extrabold leading-none">{author?.nickname ?? "Someone"}</p>
                 </div>
               </div>
             </div>
 
             <div className="flex items-center justify-center">
-              <div className="relative h-[66px] w-[120px]">
-                <div className="absolute left-0 top-[11px] h-[44px] w-[84px] rounded-full border-[4px] border-[rgba(43,20,84,1)] bg-white" />
-                <div className="absolute right-[8px] top-0 h-[66px] w-[66px] rotate-45 border-r-[4px] border-t-[4px] border-[rgba(43,20,84,1)] bg-white" />
-              </div>
+              <svg width="108" height="72" viewBox="0 0 108 72" fill="none" aria-hidden="true">
+                <path d="M12 36C12 27.2 19.2 20 28 20H56" stroke="rgb(43 20 84)" strokeWidth="6" strokeLinecap="round"/>
+                <path d="M12 36C12 44.8 19.2 52 28 52H56" stroke="rgb(43 20 84)" strokeWidth="6" strokeLinecap="round"/>
+                <path d="M48 12L76 36L48 60" stroke="rgb(43 20 84)" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
             </div>
 
-            <div className="relative rounded-[2.15rem] border-[4px] border-[rgba(85,46,130,0.92)] bg-white px-8 py-5 shadow-[0_7px_0_rgba(84,38,130,0.65)]">
-              <div className="absolute right-[18px] top-[-28px] h-0 w-0 border-x-[18px] border-b-[30px] border-x-transparent border-b-white drop-shadow-[0_-2px_0_rgba(85,46,130,0.92)]" />
-              <div className="flex items-center justify-between gap-4 pl-8">
+            <div className="relative rounded-[2rem] border-[4px] border-[rgba(85,46,130,0.92)] bg-white px-8 py-6 shadow-[0_7px_0_rgba(84,38,130,0.65)]">
+              <div className="absolute right-[22px] top-[-24px] h-0 w-0 border-x-[14px] border-b-[24px] border-x-transparent border-b-white drop-shadow-[0_-2px_0_rgba(85,46,130,0.92)]" />
+              <div className="flex items-center justify-between gap-4 pl-6">
                 <div className="min-w-0 text-right">
-                  <p className="pr-16 text-[16px] font-extrabold uppercase tracking-[0.15em] text-[rgba(117,108,138,1)]">To</p>
-                  <p className="truncate pr-16 text-[54px] font-extrabold leading-none">{performers.map((p) => p.nickname).join(" + ")}</p>
+                  <p className="pr-14 text-[15px] font-extrabold uppercase tracking-[0.14em] text-[rgba(117,108,138,1)]">To</p>
+                  <p className="truncate pr-14 text-[44px] font-extrabold leading-none">{performers.map((p) => p.nickname).join(" + ")}</p>
                 </div>
-                <div className="absolute -right-6 top-1/2 flex h-[92px] w-[92px] -translate-y-1/2 items-center justify-center rounded-full border-[4px] border-[rgba(85,46,130,0.92)] bg-white text-[52px] shadow-[0_6px_0_rgba(84,38,130,0.45)]">
+                <div className="absolute -right-7 top-1/2 flex h-[84px] w-[84px] -translate-y-1/2 items-center justify-center rounded-full border-[4px] border-[rgba(85,46,130,0.92)] bg-white text-[46px] shadow-[0_6px_0_rgba(84,38,130,0.45)]">
                   🎭
                 </div>
               </div>

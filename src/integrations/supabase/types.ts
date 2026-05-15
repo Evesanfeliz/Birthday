@@ -110,6 +110,7 @@ export type Database = {
           current_challenge_id: string | null
           host_player_id: string | null
           id: string
+          name: string
           phase: string
           round: number
         }
@@ -119,6 +120,7 @@ export type Database = {
           current_challenge_id?: string | null
           host_player_id?: string | null
           id?: string
+          name: string
           phase?: string
           round?: number
         }
@@ -128,6 +130,7 @@ export type Database = {
           current_challenge_id?: string | null
           host_player_id?: string | null
           id?: string
+          name?: string
           phase?: string
           round?: number
         }
