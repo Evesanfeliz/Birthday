@@ -373,23 +373,26 @@ function SubmittingPhase({
   const submittedIds = new Set(roundChallenges.map((c) => c.created_by));
   const allSubmitted = players.length > 0 && players.every((p) => submittedIds.has(p.id));
 
+  const advance = async () => {
+    if (!isHost || roundChallenges.length === 0) return;
+    const first = [...roundChallenges].sort(
+      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    )[0];
+    if (!first) return;
+    await supabase
+      .from("rooms")
+      .update({ phase: "performing", current_challenge_id: first.id })
+      .eq("id", room.id);
+    await supabase.from("challenges").update({ status: "performing" }).eq("id", first.id);
+  };
+
   // Auto-advance when every participant submitted. Host triggers to avoid races.
   useEffect(() => {
-    if (!allSubmitted || roundChallenges.length === 0) return;
-    if (!isHost) return;
-    (async () => {
-      const first = [...roundChallenges].sort(
-        (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-      )[0];
-      if (!first) return;
-      await supabase
-        .from("rooms")
-        .update({ phase: "performing", current_challenge_id: first.id })
-        .eq("id", room.id);
-      await supabase.from("challenges").update({ status: "performing" }).eq("id", first.id);
-    })();
+    if (allSubmitted && isHost && roundChallenges.length > 0) {
+      advance();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allSubmitted, isHost, room.id, roundChallenges.length]);
+  }, [allSubmitted, isHost, roundChallenges.length]);
 
   if (isHost) {
     return (
@@ -407,9 +410,24 @@ function SubmittingPhase({
               <p className="mt-3 text-stroke text-8xl font-extrabold">{Math.max(players.length - roundChallenges.length, 0)}</p>
             </div>
           </div>
-          <div className="mt-8 rounded-2xl bg-primary px-6 py-5 text-center text-2xl font-extrabold text-primary-foreground shadow-tile">
-            {allSubmitted ? "All challenges are in. Starting now..." : "Waiting for the last players"}
-          </div>
+          <button
+            onClick={advance}
+            disabled={roundChallenges.length === 0}
+            className="mt-8 flex w-full items-center justify-center gap-3 rounded-2xl bg-primary px-6 py-6 text-3xl font-extrabold text-primary-foreground shadow-tile transition-all hover:bg-primary/90 active:translate-y-1 disabled:opacity-50"
+          >
+            {allSubmitted ? (
+              "All in! Starting now..."
+            ) : (
+              <>
+                Continue with {roundChallenges.length} {roundChallenges.length === 1 ? "challenge" : "challenges"} <ArrowRight className="h-8 w-8" />
+              </>
+            )}
+          </button>
+          {!allSubmitted && roundChallenges.length > 0 && (
+            <p className="mt-4 text-center text-sm font-bold uppercase tracking-widest text-white/40">
+              Host override: proceed without waiting for everyone
+            </p>
+          )}
         </div>
 
         <div className="rounded-[2rem] bg-card-pop p-8 text-card-foreground shadow-pop">
@@ -712,34 +730,42 @@ function VotingPhase({
     await supabase.from("votes").insert({ challenge_id: challenge.id, voter_id: me.id, rating });
   }
 
+  const finalize = async () => {
+    if (!isHost) return;
+    const ratings = votes.map((v) => v.rating);
+    const avg = ratings.length ? ratings.reduce((a, b) => a + b, 0) / ratings.length : 0;
+    
+    // Update performer scores
+    for (const pid of challenge.performer_ids) {
+      const p = players.find((x) => x.id === pid);
+      if (!p) continue;
+      await supabase.from("players").update({ score: Number(p.score) + avg }).eq("id", pid);
+    }
+    
+    // Mark challenge as done
+    await supabase.from("challenges").update({ status: "done", avg_rating: avg }).eq("id", challenge.id);
+
+    // Find next pending challenge in this round
+    const remaining = roundChallenges
+      .filter((c) => c.id !== challenge.id && c.status === "pending")
+      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+
+    if (remaining.length > 0) {
+      const next = remaining[0];
+      await supabase.from("rooms").update({ phase: "performing", current_challenge_id: next.id }).eq("id", room.id);
+      await supabase.from("challenges").update({ status: "performing" }).eq("id", next.id);
+    } else {
+      await supabase.from("rooms").update({ phase: "results" }).eq("id", room.id);
+    }
+  };
+
   // Auto-finalize when everyone has voted — only host triggers to avoid races
   useEffect(() => {
-    if (!allVoted || !isHost) return;
-    (async () => {
-      const ratings = votes.map((v) => v.rating);
-      const avg = ratings.length ? ratings.reduce((a, b) => a + b, 0) / ratings.length : 0;
-      for (const pid of challenge.performer_ids) {
-        const p = players.find((x) => x.id === pid);
-        if (!p) continue;
-        await supabase.from("players").update({ score: Number(p.score) + avg }).eq("id", pid);
-      }
-      await supabase.from("challenges").update({ status: "done", avg_rating: avg }).eq("id", challenge.id);
-
-      // Find next pending challenge in this round
-      const remaining = roundChallenges
-        .filter((c) => c.id !== challenge.id && c.status === "pending")
-        .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-
-      if (remaining.length > 0) {
-        const next = remaining[0];
-        await supabase.from("rooms").update({ phase: "performing", current_challenge_id: next.id }).eq("id", room.id);
-        await supabase.from("challenges").update({ status: "performing" }).eq("id", next.id);
-      } else {
-        await supabase.from("rooms").update({ phase: "results" }).eq("id", room.id);
-      }
-    })();
+    if (allVoted && isHost) {
+      finalize();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allVoted]);
+  }, [allVoted, isHost]);
 
   const pendingCount = roundChallenges.filter((c) => c.status === "pending").length;
   const voteProgress = eligibleVoters.length > 0 ? Math.round((votes.length / eligibleVoters.length) * 100) : 0;
@@ -784,6 +810,20 @@ function VotingPhase({
             <p className="text-sm font-bold uppercase tracking-[0.3em] opacity-80">Live progress</p>
             <p className="mt-4 text-stroke text-8xl font-extrabold">{voteProgress}%</p>
           </div>
+
+          {!allVoted && votes.length > 0 && (
+            <div className="lg:col-span-2">
+              <button
+                onClick={finalize}
+                className="flex w-full items-center justify-center gap-3 rounded-2xl bg-white/10 px-6 py-5 text-2xl font-extrabold text-white shadow-tile transition-all hover:bg-white/20 active:translate-y-1"
+              >
+                Continue with {votes.length} {votes.length === 1 ? "vote" : "votes"} <ArrowRight className="h-7 w-7" />
+              </button>
+              <p className="mt-3 text-center text-sm font-bold uppercase tracking-widest text-white/40">
+                Host override: proceed without waiting for everyone
+              </p>
+            </div>
+          )}
         </div>
       ) : isPerformer ? (
         <p className="rounded-xl bg-muted px-4 py-6 text-center font-semibold text-muted-foreground">
